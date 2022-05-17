@@ -1421,6 +1421,16 @@
             "format": "int64",
             "name": "PanelID",
             "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-go-name": "Filter",
+            "description": "A list of matchers to filter rules by",
+            "name": "filter",
+            "in": "query"
           }
         ],
         "responses": {
@@ -1608,6 +1618,16 @@
             "type": "integer",
             "format": "int64",
             "name": "PanelID",
+            "in": "query"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "x-go-name": "Filter",
+            "description": "A list of matchers to filter rules by",
+            "name": "filter",
             "in": "query"
           }
         ],
@@ -5132,6 +5152,7 @@
       "x-go-package": "github.com/prometheus/alertmanager/api/v2/models"
     },
     "alertGroup": {
+      "description": "AlertGroup alert group",
       "type": "object",
       "required": [
         "alerts",
@@ -5154,8 +5175,6 @@
           "$ref": "#/definitions/receiver"
         }
       },
-      "x-go-name": "AlertGroup",
-      "x-go-package": "github.com/prometheus/alertmanager/api/v2/models",
       "$ref": "#/definitions/alertGroup"
     },
     "alertGroups": {
@@ -5285,7 +5304,6 @@
       "$ref": "#/definitions/Duration"
     },
     "gettableAlert": {
-      "description": "GettableAlert gettable alert",
       "type": "object",
       "required": [
         "labels",
@@ -5345,6 +5363,8 @@
           "x-go-name": "UpdatedAt"
         }
       },
+      "x-go-name": "GettableAlert",
+      "x-go-package": "github.com/prometheus/alertmanager/api/v2/models",
       "$ref": "#/definitions/gettableAlert"
     },
     "gettableAlerts": {
@@ -5357,6 +5377,7 @@
       "$ref": "#/definitions/gettableAlerts"
     },
     "gettableSilence": {
+      "description": "GettableSilence gettable silence",
       "type": "object",
       "required": [
         "comment",
@@ -5409,8 +5430,6 @@
           "x-go-name": "UpdatedAt"
         }
       },
-      "x-go-name": "GettableSilence",
-      "x-go-package": "github.com/prometheus/alertmanager/api/v2/models",
       "$ref": "#/definitions/gettableSilence"
     },
     "gettableSilences": {
@@ -5549,7 +5568,6 @@
       "x-go-package": "github.com/prometheus/alertmanager/api/v2/models"
     },
     "postableSilence": {
-      "description": "PostableSilence postable silence",
       "type": "object",
       "required": [
         "comment",
@@ -5590,10 +5608,11 @@
           "x-go-name": "StartsAt"
         }
       },
+      "x-go-name": "PostableSilence",
+      "x-go-package": "github.com/prometheus/alertmanager/api/v2/models",
       "$ref": "#/definitions/postableSilence"
     },
     "receiver": {
-      "description": "Receiver receiver",
       "type": "object",
       "required": [
         "name"
@@ -5605,6 +5624,8 @@
           "x-go-name": "Name"
         }
       },
+      "x-go-name": "Receiver",
+      "x-go-package": "github.com/prometheus/alertmanager/api/v2/models",
       "$ref": "#/definitions/receiver"
     },
     "silence": {

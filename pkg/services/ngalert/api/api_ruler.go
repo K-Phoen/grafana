@@ -7,25 +7,24 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/grafana/grafana/pkg/services/accesscontrol"
-	"github.com/grafana/grafana/pkg/services/datasources"
-	"github.com/grafana/grafana/pkg/services/ngalert/provisioning"
-	"github.com/grafana/grafana/pkg/services/ngalert/store"
-	"github.com/grafana/grafana/pkg/services/quota"
-	"github.com/grafana/grafana/pkg/setting"
-	"github.com/grafana/grafana/pkg/util/cmputil"
-
-	"github.com/prometheus/common/model"
-
 	"github.com/grafana/grafana/pkg/api/apierrors"
 	"github.com/grafana/grafana/pkg/api/response"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/services/accesscontrol"
+	"github.com/grafana/grafana/pkg/services/datasources"
 	apimodels "github.com/grafana/grafana/pkg/services/ngalert/api/tooling/definitions"
 	ngmodels "github.com/grafana/grafana/pkg/services/ngalert/models"
+	"github.com/grafana/grafana/pkg/services/ngalert/provisioning"
 	"github.com/grafana/grafana/pkg/services/ngalert/schedule"
+	"github.com/grafana/grafana/pkg/services/ngalert/store"
+	"github.com/grafana/grafana/pkg/services/quota"
+	"github.com/grafana/grafana/pkg/setting"
 	"github.com/grafana/grafana/pkg/util"
+	"github.com/grafana/grafana/pkg/util/cmputil"
 	"github.com/grafana/grafana/pkg/web"
+	"github.com/prometheus/alertmanager/pkg/labels"
+	"github.com/prometheus/common/model"
 )
 
 type RulerSrv struct {
@@ -275,6 +274,12 @@ func (srv RulerSrv) RouteGetRulesConfig(c *models.ReqContext) response.Response 
 		return ErrResp(http.StatusBadRequest, errors.New("panel_id must be set with dashboard_uid"), "")
 	}
 
+	matchers, err := parseFilter(c.QueryStrings("filter"))
+	if err != nil {
+		srv.log.Error("failed to parse matchers", "err", err)
+		return ErrResp(http.StatusBadRequest, err, "invalid filter")
+	}
+
 	q := ngmodels.ListAlertRulesQuery{
 		OrgID:         c.SignedInUser.OrgId,
 		NamespaceUIDs: namespaceUIDs,
@@ -298,6 +303,9 @@ func (srv RulerSrv) RouteGetRulesConfig(c *models.ReqContext) response.Response 
 	configs := make(map[ngmodels.AlertRuleGroupKey][]*ngmodels.AlertRule)
 	for _, r := range q.Result {
 		if !authorizeDatasourceAccessForRule(r, hasAccess) {
+			continue
+		}
+		if !ruleMatchesFilterLabels(r, matchers) {
 			continue
 		}
 		groupKey := r.GetGroupKey()
@@ -544,6 +552,51 @@ func toGettableExtendedRuleNode(r ngmodels.AlertRule, namespaceID int64, provena
 		Labels:      r.Labels,
 	}
 	return gettableExtendedRuleNode
+}
+
+func parseFilter(filter []string) ([]*labels.Matcher, error) {
+	matchers := make([]*labels.Matcher, 0, len(filter))
+	for _, matcherString := range filter {
+		matcher, err := labels.ParseMatcher(matcherString)
+		if err != nil {
+			return nil, err
+		}
+
+		matchers = append(matchers, matcher)
+	}
+	return matchers, nil
+}
+
+func ruleMatchesFilterLabels(a *ngmodels.AlertRule, matchers []*labels.Matcher) bool {
+	sms := make(map[string]string)
+	for name, value := range a.Labels {
+		sms[string(name)] = string(value)
+	}
+	return matchFilterLabels(matchers, sms)
+}
+
+func matchFilterLabels(matchers []*labels.Matcher, sms map[string]string) bool {
+	for _, m := range matchers {
+		v, prs := sms[m.Name]
+		switch m.Type {
+		case labels.MatchNotRegexp, labels.MatchNotEqual:
+			if m.Value == "" && prs {
+				continue
+			}
+			if !m.Matches(v) {
+				return false
+			}
+		default:
+			if m.Value == "" && !prs {
+				continue
+			}
+			if !m.Matches(v) {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func toNamespaceErrorResponse(err error) response.Response {

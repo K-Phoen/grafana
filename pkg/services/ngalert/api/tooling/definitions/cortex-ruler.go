@@ -150,6 +150,10 @@ type PathGetRulesParams struct {
 	DashboardUID string
 	// in: query
 	PanelID int64
+	// A list of matchers to filter rules by
+	// in: query
+	// required: false
+	Filter []string `json:"filter"`
 }
 
 // swagger:model
